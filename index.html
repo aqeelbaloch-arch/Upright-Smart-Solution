@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rent Invoice System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="style.css">
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+<h1>🏠 Rent & Utility Invoice System</h1>
+
+<!-- ADD RENTER -->
+<div class="card">
+<h2>Add Renter</h2>
+<input id="renterName" placeholder="Renter Name">
+<input id="renterUnit" placeholder="Flat / Portion">
+<input id="renterPhone" placeholder="WhatsApp Number (92xxxxxxxxxx)">
+<button onclick="addRenter()">Add Renter</button>
+</div>
+
+<!-- CREATE INVOICE -->
+<div class="card">
+<h2>Create Invoice</h2>
+<select id="renterSelect"></select>
+<input type="month" id="invoiceMonth">
+
+<div class="grid">
+<input type="number" id="rent" placeholder="Rent">
+<input type="number" id="electricity" placeholder="Electricity">
+<input type="number" id="gas" placeholder="Gas">
+<input type="number" id="water" placeholder="Water">
+<input type="number" id="maintenance" placeholder="Maintenance">
+</div>
+
+<button onclick="generateInvoice()">Generate PDF & Save</button>
+</div>
+
+<!-- SEARCH & FILTER -->
+<div class="card">
+<h2>Search Invoices</h2>
+<input id="searchName" placeholder="Search by renter name" onkeyup="renderInvoices()">
+<input type="month" id="filterMonth" onchange="renderInvoices()">
+</div>
+
+<!-- INVOICE LIST -->
+<div class="card">
+<h2>Invoice Records</h2>
+<table>
+<thead>
+<tr>
+<th>Renter</th>
+<th>Month</th>
+<th>Total</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody id="invoiceTable"></tbody>
+</table>
+</div>
+</div>
+
+<script src="app.js"></script>
+</body>
+  </html>
