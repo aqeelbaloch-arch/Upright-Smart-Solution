@@ -120,3 +120,64 @@ localStorage.setItem("invoices", JSON.stringify(invoices));
 renderInvoices();
   }
 
+function loadPage(page) {
+
+  if (page === 'dashboard') loadDashboard();
+
+  /* RENTERS PAGE */
+  if (page === 'renters') {
+    document.getElementById('content').innerHTML = `
+      <h2>Manage Renters</h2>
+
+      <form onsubmit="addRenter(event)">
+        <input type="text" id="renterName" placeholder="Renter Name" required>
+        <input type="number" id="monthlyRent" placeholder="Monthly Rent" required>
+        <input type="number" id="advance" placeholder="Advance Amount">
+        <input type="number" id="surety" placeholder="Surety Deposit">
+        <button>Add Renter</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Rent</th>
+            <th>Advance</th>
+            <th>Surety</th>
+          </tr>
+        </thead>
+        <tbody id="rentersList"></tbody>
+      </table>
+    `;
+    renderRenters();
+  }
+
+  /* INSTALLMENT CUSTOMERS PAGE */
+  if (page === 'installments') {
+    document.getElementById('content').innerHTML = `
+      <h2>Installment Customers</h2>
+
+      <form onsubmit="addInstallmentCustomer(event)">
+        <input type="text" id="custName" placeholder="Customer Name" required>
+        <input type="text" id="item" placeholder="Item Name" required>
+        <input type="number" id="totalPrice" placeholder="Total Price" required>
+        <input type="number" id="advancePaid" placeholder="Advance Paid">
+        <button>Add Customer</button>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Item</th>
+            <th>Total</th>
+            <th>Advance</th>
+          </tr>
+        </thead>
+        <tbody id="installmentList"></tbody>
+      </table>
+    `;
+    renderInstallmentCustomers();
+  }
+
+      }
