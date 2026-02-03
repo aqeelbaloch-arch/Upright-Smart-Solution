@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Upright Smart Solution</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- jsPDF (for PDF export) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Upright Smart Solution</div>
+    <div class="search-wrap">
+      <input id="globalSearch" placeholder="Search renter / property / item..." />
+    </div>
+    <button id="addRenterBtn" class="btn">+ Add</button>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <nav>
+        <ul>
+          <li class="active" data-view="dashboard">Dashboard</li>
+          <li data-view="renters">Renters</li>
+          <li data-view="installments">Installments</li>
+          <li data-view="expenses">Expenses</li>
+          <li data-view="reports">Reports</li>
+        </ul>
+      </nav>
+    </aside>
+
+    <section class="content">
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view active">
+        <div class="cards">
+          <div class="card">
+            <h4>Total Income (Month)</h4>
+            <div id="card-income" class="card-value">₹0</div>
+          </div>
+          <div class="card">
+            <h4>Pending</h4>
+            <div id="card-pending" class="card-value">₹0</div>
+          </div>
+          <div class="card">
+            <h4>Overdue</h4>
+            <div id="card-overdue" class="card-value">0</div>
+          </div>
+          <div class="card">
+            <h4>Net (Month)</h4>
+            <div id="card-net" class="card-value">₹0</div>
+          </div>
+        </div>
+
+        <div class="analytics">
+          <canvas id="incomeChart" height="120"></canvas>
+        </div>
+
+        <div class="list-preview">
+          <h3>Top Defaulters</h3>
+          <ul id="topDefaulters"></ul>
+        </div>
+      </section>
+
+      <!-- RENTERS -->
+      <section id="view-renters" class="view">
+        <div class="toolbar">
+          <select id="filterStatus">
+            <option value="all">All</option>
+            <option value="paid">Paid</option>
+            <option value="due">Due</option>
+            <option value="overdue">Overdue</option>
+          </select>
+          <button id="exportPdfRenters" class="btn">Export Renters PDF</button>
+        </div>
+
+        <div id="rentersList" class="cards-grid"></div>
+      </section>
+
+      <!-- INSTALLMENTS -->
+      <section id="view-installments" class="view">
+        <h3>Installment Customers</h3>
+        <div id="installmentList" class="cards-grid"></div>
+      </section>
+
+      <!-- EXPENSES -->
+      <section id="view-expenses" class="view">
+        <h3>Expenses</h3>
+        <div id="expensesList"></div>
+      </section>
+
+      <!-- REPORTS -->
+      <section id="view-reports" class="view">
+        <h3>Reports</h3>
+        <button id="downloadMonthlyReport" class="btn">Download Monthly Report (PDF)</button>
+      </section>
+    </section>
+  </main>
+
+  <!-- Modal: Add Renter / Payment -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="modal-panel">
+      <button id="closeModal" class="modal-close">✕</button>
+      <h3 id="modalTitle">Add Renter</h3>
+
+      <form id="renterForm">
+        <label>
+          Name
+          <input name="name" required />
+        </label>
+        <label>
+          Contact
+          <input name="contact" />
+        </label>
+        <label>
+          Property / Flat
+          <input name="property" />
+        </label>
+        <label>
+          Monthly Rent
+          <input name="monthlyRent" type="number" min="0" required />
+        </label>
+        <label>
+          Advance Amount
+          <input name="advance" type="number" min="0" value="0" />
+        </label>
+        <label>
+          Rent Due Day (1-31)
+          <input name="dueDay" type="number" min="1" max="31" value="1" />
+        </label>
+        <label>
+          Notes
+          <textarea name="notes"></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button type="submit" class="btn primary">Save</button>
+          <button type="button" id="saveAndAddPayment" class="btn">Save & Add Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="data/sample-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
