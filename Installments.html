@@ -1,0 +1,165 @@
+<!DOCTYPE html><html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Customer Installment Accounts</title><script src="https://cdn.tailwindcss.com"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script></head><body class="bg-gray-100 min-h-screen"><header class="bg-indigo-800 text-white p-4 sm:p-6 shadow">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold">Customer Installment Accounts</h1>
+      <p class="text-sm opacity-90">Accounting • Deposits • Payments • Balances</p>
+    </div>
+    <a href="index.html" class="inline-block bg-white text-indigo-800 px-4 py-2 rounded-lg font-medium shadow hover:bg-gray-100 transition">
+      Go to Renter Management
+    </a>
+  </div>
+</header><main class="p-4 sm:p-6 space-y-6" id="container"></main><footer class="text-center text-sm text-gray-500 py-4">© 2026 Upright Smart Solution</footer><script>
+let customers = JSON.parse(localStorage.getItem("installmentCustomers")) || [];
+
+function save() {
+  localStorage.setItem("installmentCustomers", JSON.stringify(customers));
+  render();
+}
+
+function addCustomer() {
+  const c = {
+    name: cname.value.trim(),
+    phone: cphone.value.trim(),
+    address: caddress.value.trim(),
+    cnic: ccnic.value.trim(),
+    item: citem.value.trim(),
+    price: Number(cprice.value),
+    deposit: Number(cdeposit.value) || 0,
+    installments: [],
+    created: new Date().toLocaleDateString()
+  };
+
+  if (!c.name || !c.item || !c.price) return alert("Required fields missing");
+
+  customers.push(c);
+  save();
+}
+
+function addInstallment(i) {
+  const amt = Number(document.getElementById(`amt-${i}`).value);
+  const due = document.getElementById(`due-${i}`).value;
+  if (!amt || !due) return alert("Amount & due date required");
+
+  customers[i].installments.push({
+    amount: amt,
+    due,
+    status: "Unpaid",
+    date: new Date().toLocaleDateString()
+  });
+  save();
+}
+
+function toggle(i,j){
+  const ins = customers[i].installments[j];
+  ins.status = ins.status === "Paid" ? "Unpaid" : "Paid";
+  save();
+}
+
+function totals(c){
+  const paidInst = c.installments.filter(x=>x.status==='Paid').reduce((a,b)=>a+b.amount,0);
+  const totalPaid = paidInst + c.deposit;
+  return {
+    totalPaid,
+    balance: c.price - totalPaid
+  };
+}
+
+function late(ins){ return ins.status==='Unpaid' && new Date(ins.due) < new Date(); }
+
+function removeCustomer(i){
+  if(!confirm("Remove customer after completion?")) return;
+  customers.splice(i,1); save();
+}
+
+function invoicePDF(c){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFontSize(14);
+  doc.text("CUSTOMER INSTALLMENT INVOICE",20,20);
+
+  doc.setFontSize(11);
+  doc.text(`Customer: ${c.name}`,20,35);
+  doc.text(`Phone: ${c.phone}`,20,45);
+  doc.text(`CNIC: ${c.cnic}`,20,55);
+  doc.text(`Address: ${c.address}`,20,65);
+
+  doc.line(20,70,190,70);
+
+  doc.text(`Item: ${c.item}`,20,85);
+  doc.text(`Total Price: $${c.price}`,20,95);
+  doc.text(`Surety Deposit: $${c.deposit}`,20,105);
+
+  const t = totals(c);
+  doc.text(`Total Paid: $${t.totalPaid}`,20,115);
+  doc.text(`Balance Due: $${t.balance}`,20,125);
+
+  doc.line(20,135,190,135);
+  doc.text(`Invoice Date: ${new Date().toLocaleDateString()}`,20,150);
+
+  doc.save(`Invoice-${c.name}.pdf`);
+}
+
+function render(){
+  container.innerHTML = `
+  <section class="bg-white p-4 sm:p-6 rounded-xl shadow">
+    <h2 class="text-lg font-semibold mb-3">Add New Customer</h2>
+    <div class="grid sm:grid-cols-4 gap-2">
+      <input id="cname" placeholder="Customer Name" class="border p-2 rounded"/>
+      <input id="cphone" placeholder="Phone" class="border p-2 rounded"/>
+      <input id="ccnic" placeholder="CNIC" class="border p-2 rounded"/>
+      <input id="caddress" placeholder="Address" class="border p-2 rounded"/>
+      <input id="citem" placeholder="Item" class="border p-2 rounded"/>
+      <input id="cprice" type="number" placeholder="Total Price" class="border p-2 rounded"/>
+      <input id="cdeposit" type="number" placeholder="Surety Deposit" class="border p-2 rounded"/>
+      <button onclick="addCustomer()" class="bg-indigo-600 text-white rounded px-4">Add Customer</button>
+    </div>
+  </section>`;
+
+  customers.forEach((c,i)=>{
+    const t = totals(c);
+    container.innerHTML += `
+    <section class="bg-white p-4 sm:p-6 rounded-xl shadow">
+      <div class="flex flex-col sm:flex-row justify-between gap-2">
+        <h3 class="font-semibold text-lg">${c.name} — ${c.item}</h3>
+        <div class="text-sm">Paid: <b class="text-green-600">$${t.totalPaid}</b> | Balance: <b class="text-red-600">$${t.balance}</b></div>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-2 mt-3">
+        <input id="amt-${i}" type="number" placeholder="Installment Amount" class="border p-2 rounded"/>
+        <input id="due-${i}" type="date" class="border p-2 rounded"/>
+        <button onclick="addInstallment(${i})" class="bg-green-600 text-white rounded">Add Installment</button>
+      </div>
+
+      <div class="overflow-x-auto mt-4">
+        <table class="w-full text-sm border">
+          <thead class="bg-gray-100"><tr><th class="border p-2">Due</th><th class="border p-2">Amount</th><th class="border p-2">Status</th><th class="border p-2">Flag</th><th class="border p-2">Action</th></tr></thead>
+          <tbody>
+            ${c.installments.map((ins,j)=>`
+              <tr class="${late(ins)?'bg-red-50':''}">
+                <td class="border p-2">${ins.due}</td>
+                <td class="border p-2">$${ins.amount}</td>
+                <td class="border p-2">${ins.status}</td>
+                <td class="border p-2">${late(ins)?'<span class="text-red-600">LATE</span>':'-'}</td>
+                <td class="border p-2 space-x-2">
+                  <button onclick="toggle(${i},${j})" class="text-blue-600">Toggle</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-between mt-3 text-sm">
+        <button onclick="invoicePDF(customers[${i}])" class="text-indigo-600">Generate Invoice PDF</button>
+        <button onclick="removeCustomer(${i})" class="text-red-600">Remove Customer</button>
+      </div>
+    </section>`;
+  });
+}
+
+render();
+</script></body>
+</html>

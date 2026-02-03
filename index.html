@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Renter Management System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body class="bg-gray-100">
+<script>
+const { jsPDF } = window.jspdf;
+</script>
+
+<!-- HEADER -->
+<header class="bg-indigo-600 text-white p-5 flex justify-between items-center">
+  <div>
+    <h1 class="text-2xl font-bold">Renter Management System</h1>
+    <p class="text-sm opacity-90">Auto-saved using LocalStorage</p>
+  </div>
+  <a href="installments.html"
+     class="bg-white text-indigo-600 px-4 py-2 rounded font-semibold">
+     Manage Installments →
+  </a>
+</header>
+
+<!-- ADD RENTER -->
+<section class="p-4 bg-white shadow m-4 rounded">
+  <h2 class="font-bold mb-2">Add New Renter</h2>
+  <div class="grid md:grid-cols-4 gap-2">
+    <input id="nameInput" placeholder="Renter Name" class="border p-2 rounded">
+    <input id="unitInput" placeholder="Unit / Flat" class="border p-2 rounded">
+    <input id="rentInput" type="number" placeholder="Monthly Rent" class="border p-2 rounded">
+    <button onclick="addRenter()" class="bg-indigo-600 text-white rounded">
+      Add Renter
+    </button>
+  </div>
+</section>
+
+<!-- RENTER LIST -->
+<section id="renterList" class="p-4 space-y-4"></section>
+
+<!-- MODAL -->
+<div id="modal"
+     class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white w-full max-w-2xl p-4 rounded shadow">
+    <div class="flex justify-between mb-2">
+      <b id="modalTitle"></b>
+      <button onclick="closeModal()" class="text-red-600">✕</button>
+    </div>
+
+    <div class="flex gap-2 mb-2">
+      <input id="amountFilter" type="number" placeholder="Min amount"
+             class="border p-1 rounded text-sm"
+             oninput="filterPopup()">
+
+      <button onclick="exportSelectedPDF()"
+              class="bg-green-600 text-white px-3 py-1 rounded text-sm">
+        Export PDF
+      </button>
+
+      <button onclick="printPopup()"
+              class="bg-gray-700 text-white px-3 py-1 rounded text-sm">
+        Print
+      </button>
+    </div>
+
+    <div id="popupList" class="space-y-2 max-h-80 overflow-y-auto"></div>
+  </div>
+</div>
+
+<script>
+/* ===================== DATA ===================== */
+let renters = JSON.parse(localStorage.getItem("renters") || "[]");
+let popupInvoices = [];
+let popupRenter = null;
+
+/* ===================== UTILS ===================== */
+function save(){
+  localStorage.setItem("renters", JSON.stringify(renters));
+  render();
+}
+
+function uid(){
+  return Math.random().toString(36).slice(2);
+}
+
+/* ===================== RENTER ===================== */
+function addRenter(){
+  const name = nameInput.value.trim();
+  const unit = unitInput.value.trim();
+  const rent = Number(rentInput.value);
+
+  if(!name || !rent){
+    alert("Name and rent are required");
+    return;
+  }
+
+  renters.push({
+    id: uid(),
+    name,
+    unit,
+    rent,
+    invoices: []
+  });
+
+  nameInput.value = "";
+  unitInput.value = "";
+  rentInput.value = "";
+  save();
+}
+
+function removeRenter(renterId){
+  const renter = renters.find(r => r.id === renterId);
+  if(!renter) return;
+
+  const ok = confirm(
+    `Remove renter?\n\n${renter.name} (${renter.unit})\n\nAll invoices will be deleted.`
+  );
+  if(!ok) return;
+
+  renters = renters.filter(r => r.id !== renterId);
+  save();
+}
+
+/* ===================== INVOICE ===================== */
+function addInvoice(rid){
+  const renter = renters.find(r => r.id === rid);
+  const date = document.getElementById(`dt-${rid}`).value;
+  if(!date) return alert("Select date & time");
+
+  const u = {
+    electricity: +document.getElementById(`e-${rid}`).value || 0,
+    gas: +document.getElementById(`g-${rid}`).value || 0,
+    water: +document.getElementById(`w-${rid}`).value || 0,
+    maintenance: +document.getElementById(`m-${rid}`).value || 0
+  };
+
+  const paidBy = document.getElementById(`paidby-${rid}`).value;
+  const total = renter.rent + Object.values(u).reduce((a,b)=>a+b,0);
+
+  renter.invoices.push({
+    id: uid(),
+    dateTime: date,
+    utilities: u,
+    total,
+    status: paidBy === "Renter" ? "Paid" : "Unpaid"
+  });
+
+  save();
+}
+
+function toggleStatus(rid, iid){
+  const r = renters.find(r=>r.id===rid);
+  const inv = r.invoices.find(i=>i.id===iid);
+  inv.status = inv.status === "Paid" ? "Unpaid" : "Paid";
+  save();
+}
+
+/* ===================== PDF & WHATSAPP ===================== */
+function invoicePDF(rid, iid){
+  const r = renters.find(r=>r.id===rid);
+  const i = r.invoices.find(i=>i.id===iid);
+
+  const pdf = new jsPDF();
+  pdf.text("Invoice", 10, 10);
+  pdf.text(`Renter: ${r.name}`, 10, 20);
+  pdf.text(`Unit: ${r.unit}`, 10, 30);
+  pdf.text(`Date: ${new Date(i.dateTime).toLocaleString()}`, 10, 40);
+  pdf.text(`Amount: $${i.total}`, 10, 50);
+  pdf.text(`Status: ${i.status}`, 10, 60);
+
+  pdf.save(`Invoice-${r.name}.pdf`);
+}
+
+function whatsappInvoice(rid, iid){
+  const r = renters.find(r=>r.id===rid);
+  const i = r.invoices.find(i=>i.id===iid);
+
+  const msg = encodeURIComponent(
+    `Invoice\nRenter: ${r.name}\nAmount: $${i.total}\nStatus: ${i.status}`
+  );
+  window.open(`https://wa.me/?text=${msg}`, "_blank");
+}
+
+/* ===================== POPUP ===================== */
+function openPopup(rid){
+  popupRenter = renters.find(r=>r.id===rid);
+  popupInvoices = popupRenter.invoices;
+  modalTitle.innerText = `${popupRenter.name} Invoices`;
+  renderPopup(popupInvoices);
+  modal.classList.remove("hidden");
+}
+
+function closeModal(){
+  modal.classList.add("hidden");
+}
+
+function renderPopup(list){
+  popupList.innerHTML = "";
+  list.forEach(i=>{
+    popupList.innerHTML += `
+      <div class="border p-2 flex justify-between text-sm">
+        <label>
+          <input type="checkbox" class="chk" value="${i.id}">
+          ${new Date(i.dateTime).toLocaleDateString()} |
+          $${i.total} | ${i.status}
+        </label>
+        <div class="flex gap-2">
+          <button onclick="toggleStatus('${popupRenter.id}','${i.id}')">Toggle</button>
+          <button onclick="invoicePDF('${popupRenter.id}','${i.id}')">PDF</button>
+          <button onclick="whatsappInvoice('${popupRenter.id}','${i.id}')">WA</button>
+        </div>
+      </div>`;
+  });
+}
+
+function filterPopup(){
+  const min = Number(amountFilter.value || 0);
+  renderPopup(popupInvoices.filter(i=>i.total >= min));
+}
+
+function exportSelectedPDF(){
+  const sel = [...document.querySelectorAll(".chk:checked")]
+    .map(c=>popupInvoices.find(i=>i.id===c.value));
+
+  if(!sel.length) return alert("Select invoices");
+
+  const pdf = new jsPDF();
+  let y = 10;
+  sel.forEach(i=>{
+    pdf.text(
+      `${new Date(i.dateTime).toLocaleDateString()} | $${i.total} | ${i.status}`,
+      10, y
+    );
+    y += 7;
+  });
+  pdf.save(`Invoices-${popupRenter.name}.pdf`);
+}
+
+function printPopup(){
+  const w = window.open("", "", "width=800,height=600");
+  w.document.write("<h3>Invoice List</h3>");
+  popupInvoices.forEach(i=>{
+    w.document.write(
+      `<p>${new Date(i.dateTime).toLocaleDateString()} - $${i.total} - ${i.status}</p>`
+    );
+  });
+  w.print();
+}
+
+/* ===================== RENDER ===================== */
+function render(){
+  renterList.innerHTML = "";
+  renters.forEach(r=>{
+    renterList.innerHTML += `
+      <div class="bg-white shadow p-4 rounded">
+        <div class="flex justify-between items-center">
+          <b>${r.name} (${r.unit})</b>
+          <button onclick="removeRenter('${r.id}')"
+                  class="text-red-600 text-sm font-semibold">
+            Remove
+          </button>
+        </div>
+
+        <div class="grid md:grid-cols-6 gap-2 mt-2">
+          <input type="datetime-local" id="dt-${r.id}" class="border p-1 rounded">
+          <input id="e-${r.id}" placeholder="Electricity" class="border p-1 rounded">
+          <input id="g-${r.id}" placeholder="Gas" class="border p-1 rounded">
+          <input id="w-${r.id}" placeholder="Water" class="border p-1 rounded">
+          <input id="m-${r.id}" placeholder="Maintenance" class="border p-1 rounded">
+          <select id="paidby-${r.id}" class="border p-1 rounded">
+            <option>Owner</option>
+            <option>Renter</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2 mt-2">
+          <button onclick="addInvoice('${r.id}')"
+                  class="bg-green-600 text-white px-3 py-1 rounded">
+            Add Invoice
+          </button>
+          <button onclick="openPopup('${r.id}')"
+                  class="bg-indigo-600 text-white px-3 py-1 rounded">
+            View Invoices
+          </button>
+        </div>
+      </div>`;
+  });
+}
+
+render();
+</script>
+</body>
+</html>
